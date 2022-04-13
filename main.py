@@ -2,6 +2,7 @@ import gc
 import sys
 import os
 import argparse
+import time
 import tensorflow as tf
 
 # (4/12/22) bug with TF 2.8 requires us to do this load trick
@@ -172,8 +173,10 @@ def main(*args, **kwargs) -> int:
     # prepare args
     EPOCHS = kwargs['epochs']
     BATCH_SIZE = kwargs['batch']
+    GEN_MODEL_DIAGRAM = kwargs['gen_model_diagram']
 
     print(f'[*] {EPOCHS} epochs, batch size of {BATCH_SIZE}')
+    start_time = time.time()
 
     # prepare data
     (x_imgs, y_base) = prepare_dataset()
@@ -217,6 +220,14 @@ def main(*args, **kwargs) -> int:
 
     # prepare model, loss/optimizer, and metrics objects
     model = Gen_SolarFCNModel(output_bias=initial_bias)
+    if GEN_MODEL_DIAGRAM:
+        keras.utils.plot_model(
+            model,
+            to_file="model.png",
+            show_shapes=False,
+            show_dtype=True,
+            dpi=300
+        )
     loss_obj = keras.losses.CategoricalCrossentropy()
     optimizer_obj = keras.optimizers.Adamax()
     
@@ -250,7 +261,7 @@ def main(*args, **kwargs) -> int:
     ax2.set_ylabel('Loss')
 
     ax1.set_xlabel('Epoch')
-    ax1.set_xlim([0,EPOCHS])
+    ax1.set_xlim([0,EPOCHS-1])
 
     plt.legend(loc='lower right')
     plt.show()
@@ -258,13 +269,15 @@ def main(*args, **kwargs) -> int:
     print("[*] Testing model...")
     test_loss, test_acc = model.evaluate(test_gen, verbose=2)
 
+    time_taken = time.time() - start_time
+
     print(
         f'\nResults:\n'
         f'\tTest loss: {test_loss}\n',
         f'\tTest accu: {test_acc}'
     )
 
-    print("[*] Complete!")
+    print(f"[*] Complete! Time taken: {time_taken} seconds")
     #///
 
     #///
@@ -337,6 +350,8 @@ if __name__ == "__main__":
         default=5, help="number of epochs to train the model for (default: 5) -- scales with GPU throughput")
     parser.add_argument('--batch', metavar='B', dest='batch', type=int, nargs='?',
         default=8, help="test/train batch size (default: 8) -- scales with GPU memory availability")
+    parser.add_argument('--gen-model-diagram', dest='gen_model_diagram', action='store_const', 
+        default=False, const=True, help="save a diagram of the model architecture to an image file")
 
     args = parser.parse_args()
     ret = main(*args._get_args(), **dict(args._get_kwargs()))

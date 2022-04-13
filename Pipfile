@@ -10,6 +10,7 @@ matplotlib = "*"
 tqdm = "*"
 pandas = "*"
 scikit-learn = "*"
+pydot = "*"
 
 [dev-packages]
 
